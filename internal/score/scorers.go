@@ -26,6 +26,7 @@ type scorerOpts struct {
 	nGTrees int
 	alpha   float64
 	asSet   bool
+	bidirectionalEdges	bool
 }
 
 type Score interface{ int64 | uint64 | float64 }
@@ -56,7 +57,7 @@ func (s *MaximizeScorer) Init(td *gr.TreeData, nprocs int, opts ...ScoreOptions)
 		}
 	}
 	s.asSet = options.asSet
-	return s.CalculateQuartetTotals(td, options.asSet, nprocs)
+	return s.CalculateQuartetTotals(td, options, nprocs)
 }
 
 func (s MaximizeScorer) CalcScore(u, w int, td *gr.TreeData) uint64 {
@@ -88,7 +89,7 @@ func (s *NormalizedScorer) Init(td *gr.TreeData, nprocs int, opts ...ScoreOption
 	}
 	s.asSet = options.asSet
 	s.NGTree = options.nGTrees
-	if err := s.CalculateQuartetTotals(td, options.asSet, nprocs); err != nil {
+	if err := s.CalculateQuartetTotals(td, options, nprocs); err != nil {
 		return err
 	}
 	var err error
@@ -129,7 +130,7 @@ func (s *SymDiffScorer) Init(td *gr.TreeData, nprocs int, opts ...ScoreOptions) 
 	}
 	s.asSet = options.asSet
 	s.Alpha = options.alpha
-	if err := s.CalculateQuartetTotals(td, options.asSet, nprocs); err != nil {
+	if err := s.CalculateQuartetTotals(td, options, nprocs); err != nil {
 		return err
 	}
 	var err error

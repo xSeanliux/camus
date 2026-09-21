@@ -23,6 +23,7 @@ type InferOptions struct {
 	ScoreMode   sc.InitableScorer       // type of edge score
 	AsSet       bool                    // calculate quartet counts as set
 	Alpha       float64                 // sym score parameter
+	BidirectionalEdges	bool 	 // infer bidirectional lateral edges
 }
 
 // Results from running the DP algorithm
@@ -37,7 +38,7 @@ type dpRunner interface {
 	RunDP() *DPResults
 }
 
-func MakeInferOptions(nprocs int, quartOpts pr.QuartetFilterOptions, minSupport float64, scoreMode sc.InitableScorer, asSet bool, alpha float64) (*InferOptions, error) {
+func MakeInferOptions(nprocs int, quartOpts pr.QuartetFilterOptions, minSupport float64, scoreMode sc.InitableScorer, asSet bool, alpha float64, bidirectionalEdges bool) (*InferOptions, error) {
 	if quartOpts.QuartetFilterOff() && asSet {
 		log.Println("WARNING: using -asSet without quartet filtering is not recommended")
 	}
@@ -48,6 +49,7 @@ func MakeInferOptions(nprocs int, quartOpts pr.QuartetFilterOptions, minSupport 
 		ScoreMode:   scoreMode,
 		AsSet:       asSet,
 		Alpha:       alpha,
+		BidirectionalEdges: bidirectionalEdges,
 	}, nil
 }
 
@@ -71,7 +73,7 @@ func Infer(tre *tree.Tree, geneTrees []*tree.Tree, opts InferOptions) (*DPResult
 	log.Println("running infer...")
 	startTime := time.Now()
 	log.Println("beginning data preprocessing")
-	td, err := pr.Preprocess(tre, geneTrees, opts.NProcs, opts.QuartetOpts, opts.MinSupport)
+	td, err := pr.Preprocess(tre, geneTrees, opts.NProcs, opts.QuartetOpts, opts.MinSupport, opts.BidirectionalEdges)
 	if err != nil {
 		return nil, fmt.Errorf("preprocess error: %w", err)
 	}
