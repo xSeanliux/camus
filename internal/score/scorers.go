@@ -23,10 +23,10 @@ type InitableScorer interface {
 type ScoreOptions func(opts *scorerOpts) error
 
 type scorerOpts struct {
-	nGTrees int
-	alpha   float64
-	asSet   bool
-	bidirectionalEdges	bool
+	nGTrees            int
+	alpha              float64
+	asSet              bool
+	bidirectionalEdges bool
 }
 
 type Score interface{ int64 | uint64 | float64 }
@@ -34,6 +34,13 @@ type Score interface{ int64 | uint64 | float64 }
 func AsSet(asSet bool) ScoreOptions {
 	return func(options *scorerOpts) error {
 		options.asSet = asSet
+		return nil
+	}
+}
+
+func BidirectionalEdges(b bool) ScoreOptions {
+	return func(options *scorerOpts) error {
+		options.bidirectionalEdges = b
 		return nil
 	}
 }

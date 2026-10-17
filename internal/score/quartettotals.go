@@ -76,19 +76,21 @@ func CycleLength(u, w int, td *gr.TreeData) int {
 // calculates the total number of quartets from the input trees that align with
 // a specific edge
 func quartetsTotal(u, w int, td *gr.TreeData, options scorerOpts) uint64 {
-	asSet := options.asSet
-	bidirectionalEdges := options.bidirectionalEdges
 	v := td.LCA(u, w)
 	uNode, wNode, vNode := td.IdToNodes[u], td.IdToNodes[w], td.IdToNodes[v]
 	var total uint64
 	wSub := getWSubtree(u, w, v, td)
+	// bidirectional edge = union of u->w and w->u; w->u invalid if u is an ancestor of w
+	reverse := options.bidirectionalEdges && ShouldCalcEdge(w, u, td)
+	var uSub *tree.Node
+	if reverse {
+		uSub = getWSubtree(w, u, v, td)
+	}
 	for _, q := range td.Quartets(v) {
-		matched := QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq
-		if !matched && bidirectionalEdges {
-			matched = QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq
-		}
+		matched := QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq ||
+			(reverse && QuartetScore(q, wNode, uNode, vNode, uSub, td) == gr.Qeq)
 		if matched {
-			if asSet {
+			if options.asSet {
 				total += 1
 			} else {
 				total += uint64(td.NumQuartet(q))

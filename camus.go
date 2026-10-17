@@ -48,7 +48,6 @@ flags:
 	-t float
 	  	threshold for quartet filter [0, 1] (default 0.5)
 	-v	prints version number and exits
-	-B  infers bidirectional edges instead
 
 examples:
 
@@ -88,7 +87,7 @@ const (
 	DefaultAlpha      = 0.1
 )
 
-var experimentalFlags = []string{"a", "asSet", "q", "sm", "b"}
+var experimentalFlags = []string{"a", "asSet", "q", "sm", "B"}
 
 type Args struct {
 	prefix       string          // output prefix
@@ -160,7 +159,7 @@ func parseArgs() Args {
 	hhelp := flag.Bool("hh", false, "prints help with experimental features and exits")
 	ver := flag.Bool("v", false, "prints version number and exits")
 	nprocs := flag.Int("n", 0, "number of parallel processes")
-	bidirectionalEdges := flag.Bool("B", false, "infer bidirectional lateral edges (default unidirectional)")
+	bidirectionalEdges := flag.Bool("B", false, "infer bidirectional lateral edges (-sm max only)")
 	flag.Parse()
 	if *help {
 		Usage(false)
@@ -260,7 +259,7 @@ func run(args Args) error {
 	}
 	newicks := make([]string, len(results.Branches))
 	for i, branches := range results.Branches {
-		newicks[i] = gr.MakeNetwork(results.Tree, branches).Newick()
+		newicks[i] = gr.MakeNetwork(results.Tree, branches, args.inferOpts.BidirectionalEdges).Newick()
 	}
 	if err = pr.WriteDPResultsToCSV(results.Tree, newicks, results.QSatScore, os.Stdout); err != nil {
 		return err

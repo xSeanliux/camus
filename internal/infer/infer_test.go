@@ -1,6 +1,7 @@
 package infer
 
 import (
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -226,7 +227,7 @@ func TestInfer(t *testing.T) {
 				t.Errorf("unexpected number of branches %d, expected %d", len(res), i+1)
 			}
 		}
-		result := gr.MakeNetwork(results.Tree, results.Branches[len(results.Branches)-1]).Newick()
+		result := gr.MakeNetwork(results.Tree, results.Branches[len(results.Branches)-1], false).Newick()
 		if result != test.result {
 			t.Errorf("result %s != expected %s", result, test.result)
 		}
@@ -317,7 +318,7 @@ func TestInfer_Large(t *testing.T) {
 			}
 			resultNwks := make([]string, len(results.Branches))
 			for i, branches := range results.Branches {
-				resultNwks[i] = gr.MakeNetwork(results.Tree, branches).Newick()
+				resultNwks[i] = gr.MakeNetwork(results.Tree, branches, false).Newick()
 			}
 			expNwksStr, err := os.ReadFile(test.resultFile)
 			if err != nil {
@@ -380,6 +381,15 @@ func BenchmarkInfer(b *testing.B) {
 		_, err := Infer(tre, quartets.Trees, InferOptions{runtime.GOMAXPROCS(0), qopts, 0, &sc.MaximizeScorer{}, false, 0, false})
 		if err != nil {
 			b.Fatalf("Infer failed with error %s", err)
+		}
+	}
+}
+
+func TestInfer_BidirectionalNeedsMax(t *testing.T) {
+	for _, scorer := range []sc.InitableScorer{&sc.NormalizedScorer{}, &sc.SymDiffScorer{}} {
+		_, err := Infer(nil, nil, InferOptions{ScoreMode: scorer, BidirectionalEdges: true})
+		if !errors.Is(err, ErrInvalidOption) {
+			t.Errorf("%T with -B: got %v, want ErrInvalidOption", scorer, err)
 		}
 	}
 }

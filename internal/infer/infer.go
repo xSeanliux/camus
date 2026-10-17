@@ -17,13 +17,13 @@ import (
 var ErrInvalidOption = errors.New("invalid option combination")
 
 type InferOptions struct {
-	NProcs      int                     // number of parallel processes
-	QuartetOpts pr.QuartetFilterOptions // quartet filter options
-	MinSupport  float64                 // edges with support below this will be filtered
-	ScoreMode   sc.InitableScorer       // type of edge score
-	AsSet       bool                    // calculate quartet counts as set
-	Alpha       float64                 // sym score parameter
-	BidirectionalEdges	bool 	 // infer bidirectional lateral edges
+	NProcs             int                     // number of parallel processes
+	QuartetOpts        pr.QuartetFilterOptions // quartet filter options
+	MinSupport         float64                 // edges with support below this will be filtered
+	ScoreMode          sc.InitableScorer       // type of edge score
+	AsSet              bool                    // calculate quartet counts as set
+	Alpha              float64                 // sym score parameter
+	BidirectionalEdges bool                    // infer bidirectional lateral edges
 }
 
 // Results from running the DP algorithm
@@ -43,12 +43,12 @@ func MakeInferOptions(nprocs int, quartOpts pr.QuartetFilterOptions, minSupport 
 		log.Println("WARNING: using -asSet without quartet filtering is not recommended")
 	}
 	return &InferOptions{
-		NProcs:      setNProcs(nprocs),
-		QuartetOpts: quartOpts,
-		MinSupport:  minSupport,
-		ScoreMode:   scoreMode,
-		AsSet:       asSet,
-		Alpha:       alpha,
+		NProcs:             setNProcs(nprocs),
+		QuartetOpts:        quartOpts,
+		MinSupport:         minSupport,
+		ScoreMode:          scoreMode,
+		AsSet:              asSet,
+		Alpha:              alpha,
 		BidirectionalEdges: bidirectionalEdges,
 	}, nil
 }
@@ -71,16 +71,20 @@ func setNProcs(nprocs int) int {
 // Errors returned come from preprocessing (invalid inputs, etc.).
 func Infer(tre *tree.Tree, geneTrees []*tree.Tree, opts InferOptions) (*DPResults, error) {
 	log.Println("running infer...")
+	if _, ok := opts.ScoreMode.(*sc.MaximizeScorer); opts.BidirectionalEdges && !ok {
+		// edge penalties (norm/sym) are one-directional
+		return nil, fmt.Errorf("%w: -B only supported with -sm max", ErrInvalidOption)
+	}
 	startTime := time.Now()
 	log.Println("beginning data preprocessing")
-	td, err := pr.Preprocess(tre, geneTrees, opts.NProcs, opts.QuartetOpts, opts.MinSupport, opts.BidirectionalEdges)
+	td, err := pr.Preprocess(tre, geneTrees, opts.NProcs, opts.QuartetOpts, opts.MinSupport)
 	if err != nil {
 		return nil, fmt.Errorf("preprocess error: %w", err)
 	}
 	var dp dpRunner
 	switch scorer := opts.ScoreMode.(type) {
 	case *sc.MaximizeScorer:
-		dp, err = newDP(scorer, td, opts.NProcs, sc.AsSet(opts.AsSet))
+		dp, err = newDP(scorer, td, opts.NProcs, sc.AsSet(opts.AsSet), sc.BidirectionalEdges(opts.BidirectionalEdges))
 	case *sc.NormalizedScorer:
 		dp, err = newDP(scorer, td, opts.NProcs, sc.AsSet(opts.AsSet), sc.WithNGtrees(len(geneTrees)))
 	case *sc.SymDiffScorer:
