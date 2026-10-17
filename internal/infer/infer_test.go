@@ -226,7 +226,7 @@ func TestInfer(t *testing.T) {
 				t.Errorf("unexpected number of branches %d, expected %d", len(res), i+1)
 			}
 		}
-		result := gr.MakeNetwork(results.Tree, results.Branches[len(results.Branches)-1]).Newick()
+		result := gr.MakeNetwork(results.Tree, results.Branches[len(results.Branches)-1], false).Newick()
 		if result != test.result {
 			t.Errorf("result %s != expected %s", result, test.result)
 		}
@@ -317,7 +317,7 @@ func TestInfer_Large(t *testing.T) {
 			}
 			resultNwks := make([]string, len(results.Branches))
 			for i, branches := range results.Branches {
-				resultNwks[i] = gr.MakeNetwork(results.Tree, branches).Newick()
+				resultNwks[i] = gr.MakeNetwork(results.Tree, branches, false).Newick()
 			}
 			expNwksStr, err := os.ReadFile(test.resultFile)
 			if err != nil {

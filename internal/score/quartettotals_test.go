@@ -3,12 +3,14 @@ package score
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/evolbioinfo/gotree/io/newick"
 
 	gr "github.com/jsdoublel/camus/internal/graphs"
+	pr "github.com/jsdoublel/camus/internal/prep"
 )
 
 func TestCalculateQuartetTotals(t *testing.T) {
@@ -41,7 +43,7 @@ func TestCalculateQuartetTotals(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			td := makeTreeDataWithQuartets(t, tc.tree, tc.quartets)
 			qt := &QuartetTotals{}
-			if err := qt.CalculateQuartetTotals(td, tc.asSet, tc.nprocs); err != nil {
+			if err := qt.CalculateQuartetTotals(td, scorerOpts{asSet: tc.asSet}, tc.nprocs); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			positive := 0
@@ -49,7 +51,7 @@ func TestCalculateQuartetTotals(t *testing.T) {
 				for w := range qt.quartetTotals[u] {
 					got := qt.quartetTotals[u][w]
 					if ShouldCalcEdge(u, w, td) {
-						want := quartetsTotal(u, w, td, tc.asSet)
+						want := quartetsTotal(u, w, td, scorerOpts{asSet: tc.asSet})
 						if got != want {
 							t.Fatalf("quartetTotals[%d][%d] = %d, want %d", u, w, got, want)
 						}
@@ -146,7 +148,7 @@ func TestQuartetsTotal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			uID := nodeIDByLabel(t, tc.td, tc.uLabel)
 			wID := nodeIDByLabel(t, tc.td, tc.wLabel)
-			got := quartetsTotal(uID, wID, tc.td, tc.asSet)
+			got := quartetsTotal(uID, wID, tc.td, scorerOpts{asSet: tc.asSet})
 			if got != tc.want {
 				t.Fatalf("quartetsTotal(%s,%s) = %d, want %d", tc.uLabel, tc.wLabel, got, tc.want)
 			}
@@ -294,4 +296,45 @@ func makeTreeDataWithQuartets(t *testing.T, treeNWK string, quartets []quartetCo
 		qCounts[q] = qt.count
 	}
 	return gr.MakeTreeData(tre, qCounts)
+}
+
+func TestQuartetTotalsBidirectional(t *testing.T) {
+	tre, genes, err := pr.ReadInputFiles("../infer/testdata/constraint.nwk", "../infer/testdata/gene-trees.nwk", pr.Newick)
+	if err != nil {
+		t.Fatal(err)
+	}
+	qOpts, err := pr.SetQuartetFilterOptions(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	td, err := pr.Preprocess(tre, genes.Trees, runtime.GOMAXPROCS(0), qOpts, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uni, bi QuartetTotals
+	if err := uni.CalculateQuartetTotals(td, scorerOpts{}, runtime.GOMAXPROCS(0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := bi.CalculateQuartetTotals(td, scorerOpts{bidirectionalEdges: true}, runtime.GOMAXPROCS(0)); err != nil {
+		t.Fatal(err)
+	}
+	changed := false
+	for u := range bi.quartetTotals {
+		for w := range bi.quartetTotals[u] {
+			b, f := bi.quartetTotals[u][w], uni.quartetTotals[u][w]
+			if b < f {
+				t.Fatalf("bi total %d < uni total %d for %d->%d", b, f, u, w)
+			}
+			changed = changed || b != f
+			if !ShouldCalcEdge(w, u, td) && b != f {
+				t.Fatalf("reverse invalid but bi %d != uni %d for %d->%d", b, f, u, w)
+			}
+			if ShouldCalcEdge(u, w, td) && ShouldCalcEdge(w, u, td) && b != bi.quartetTotals[w][u] {
+				t.Fatalf("bi totals asymmetric: %d->%d = %d, %d->%d = %d", u, w, b, w, u, bi.quartetTotals[w][u])
+			}
+		}
+	}
+	if !changed {
+		t.Fatal("bidirectional option did not change any total")
+	}
 }

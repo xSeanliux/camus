@@ -12,6 +12,7 @@ func TestMakeNetwork(t *testing.T) {
 		name      string
 		constTree string
 		edges     [][2]string
+		bi        bool
 		result    string
 	}{
 		{
@@ -25,6 +26,20 @@ func TestMakeNetwork(t *testing.T) {
 			constTree: "[&R]((((A,B)u1,C)mid,G)u3,((D,E)u2,H)mid2)r;",
 			edges:     [][2]string{{"u1", "A"}, {"u2", "D"}, {"u3", "u1"}},
 			result:    "((#H1,((((#H3,((A)#H3,B)u1))#H1,C)mid,G)u3),((#H2,((D)#H2,E)u2),H)mid2)r;",
+		},
+		{
+			name:      "bidirectional",
+			constTree: "[&R]((((A,B),C),(D,E)),OUT);",
+			edges:     [][2]string{{"B", "C"}},
+			bi:        true,
+			result:    "((((A,(#H1,(B)#H2)),(#H2,(C)#H1)),(D,E)),OUT);",
+		},
+		{
+			name:      "bidirectional ancestor stays directed",
+			constTree: "[&R]((A,(B,(C,F)a)b)c,(D,E)d)e;",
+			edges:     [][2]string{{"b", "F"}},
+			bi:        true,
+			result:    "((A,(#H1,(B,(C,(F)#H1)a)b))c,(D,E)d)e;",
 		},
 	}
 	for _, test := range testCases {
@@ -54,9 +69,12 @@ func TestMakeNetwork(t *testing.T) {
 				edges[i] = Branch{IDs: [2]int{u[0].Id(), w[0].Id()}}
 			}
 			t.Logf("edges %v", edges)
-			result := MakeNetwork(td, edges).Newick()
+			result := MakeNetwork(td, edges, test.bi).Newick()
 			if result != test.result {
 				t.Errorf("%s != %s", result, test.result)
+			}
+			if _, err := newick.NewParser(strings.NewReader(result)).Parse(); err != nil {
+				t.Errorf("result does not parse back: %s", err)
 			}
 		})
 	}

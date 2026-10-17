@@ -27,8 +27,10 @@ func (br Branch) Empty() bool {
 }
 
 // Makes extended newick network out of newick tree and branch data computed by
-// the CAMUS algorithm
-func MakeNetwork(td *TreeData, branches []Branch) *Network {
+// the CAMUS algorithm. If bidirectional, each branch whose reverse is valid
+// (u not an ancestor of w) is written as two hybrids u->w and w->u, both donors
+// above both hybrid points.
+func MakeNetwork(td *TreeData, branches []Branch, bidirectional bool) *Network {
 	td = td.Clone()
 	ret := make(map[string]Branch)
 	slices.SortFunc(branches, func(br1, br2 Branch) int {
@@ -36,35 +38,58 @@ func MakeNetwork(td *TreeData, branches []Branch) *Network {
 		top2 := td.LCA(br2.IDs[0], br2.IDs[1])
 		return td.Depths[top1] - td.Depths[top2]
 	})
-	for i, branch := range branches {
-		ret[fmt.Sprintf("#H%d", i+1)] = branch
+	h := 0
+	for _, branch := range branches {
 		u, w := td.IdToNodes[branch.IDs[Ui]], td.IdToNodes[branch.IDs[Wi]]
-		uEdge, err := u.ParentEdge()
-		if err != nil {
-			panic(fmt.Sprintf("error in MakeNetwork getting u (id %d): %s", u.Id(), err))
+		h++
+		fwd := fmt.Sprintf("#H%d", h)
+		ret[fwd] = branch
+		if bidirectional && !td.Under(branch.IDs[Ui], branch.IDs[Wi]) {
+			h++
+			rev := fmt.Sprintf("#H%d", h)
+			ret[rev] = Branch{IDs: [2]int{branch.IDs[Wi], branch.IDs[Ui]}}
+			graftDonor(td, u, fwd)
+			graftDonor(td, w, rev)
+			graftHybrid(td, w, fwd)
+			graftHybrid(td, u, rev)
+		} else {
+			graftDonor(td, u, fwd)
+			graftHybrid(td, w, fwd)
 		}
-		r := td.NewNode()
-		r.SetName(fmt.Sprintf("#H%d", i+1))
-		if _, _, _, err := td.GraftTipOnEdge(r, uEdge); err != nil {
-			panic(err)
-		}
-		r = td.NewNode()
-		r.SetName("####")
-		wEdge, err := w.ParentEdge()
-		if err != nil {
-			panic(fmt.Sprintf("error in MakeNetwork getting w: %s", err))
-		}
-		if _, _, _, err := td.GraftTipOnEdge(r, wEdge); err != nil {
-			panic(err)
-		}
-		p, err := r.Parent()
-		if err != nil {
-			panic(fmt.Sprintf("error in MakeNetwork after grafting w: %s", err))
-		}
-		p.SetName(fmt.Sprintf("#H%d", i+1))
 	}
 	cleanTree(&td.Tree)
 	return &Network{NetTree: &td.Tree, Reticulations: ret}
+}
+
+// grafts donor tip named name onto n's parent edge
+func graftDonor(td *TreeData, n *tree.Node, name string) {
+	e, err := n.ParentEdge()
+	if err != nil {
+		panic(fmt.Sprintf("error in MakeNetwork getting u (id %d): %s", n.Id(), err))
+	}
+	r := td.NewNode()
+	r.SetName(name)
+	if _, _, _, err := td.GraftTipOnEdge(r, e); err != nil {
+		panic(err)
+	}
+}
+
+// grafts hybrid node named name onto n's parent edge
+func graftHybrid(td *TreeData, n *tree.Node, name string) {
+	e, err := n.ParentEdge()
+	if err != nil {
+		panic(fmt.Sprintf("error in MakeNetwork getting w: %s", err))
+	}
+	r := td.NewNode()
+	r.SetName("####")
+	if _, _, _, err := td.GraftTipOnEdge(r, e); err != nil {
+		panic(err)
+	}
+	p, err := r.Parent()
+	if err != nil {
+		panic(fmt.Sprintf("error in MakeNetwork after grafting w: %s", err))
+	}
+	p.SetName(name)
 }
 
 func (ntw *Network) Newick() string {
