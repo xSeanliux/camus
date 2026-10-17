@@ -48,12 +48,12 @@ func MakeNetwork(td *TreeData, branches []Branch, bidirectional bool) *Network {
 			h++
 			rev := fmt.Sprintf("#H%d", h)
 			ret[rev] = Branch{IDs: [2]int{branch.IDs[Wi], branch.IDs[Ui]}}
-			graftDonor(td, u, fwd)
-			graftDonor(td, w, rev)
+			graftTip(td, u, fwd)
+			graftTip(td, w, rev)
 			graftHybrid(td, w, fwd)
 			graftHybrid(td, u, rev)
 		} else {
-			graftDonor(td, u, fwd)
+			graftTip(td, u, fwd)
 			graftHybrid(td, w, fwd)
 		}
 	}
@@ -61,33 +61,25 @@ func MakeNetwork(td *TreeData, branches []Branch, bidirectional bool) *Network {
 	return &Network{NetTree: &td.Tree, Reticulations: ret}
 }
 
-// grafts donor tip named name onto n's parent edge
-func graftDonor(td *TreeData, n *tree.Node, name string) {
+// grafts tip named name onto n's parent edge; returns the tip
+func graftTip(td *TreeData, n *tree.Node, name string) *tree.Node {
 	e, err := n.ParentEdge()
 	if err != nil {
-		panic(fmt.Sprintf("error in MakeNetwork getting u (id %d): %s", n.Id(), err))
+		panic(fmt.Sprintf("error in MakeNetwork getting parent edge of node %d: %s", n.Id(), err))
 	}
 	r := td.NewNode()
 	r.SetName(name)
 	if _, _, _, err := td.GraftTipOnEdge(r, e); err != nil {
 		panic(err)
 	}
+	return r
 }
 
 // grafts hybrid node named name onto n's parent edge
 func graftHybrid(td *TreeData, n *tree.Node, name string) {
-	e, err := n.ParentEdge()
+	p, err := graftTip(td, n, "####").Parent()
 	if err != nil {
-		panic(fmt.Sprintf("error in MakeNetwork getting w: %s", err))
-	}
-	r := td.NewNode()
-	r.SetName("####")
-	if _, _, _, err := td.GraftTipOnEdge(r, e); err != nil {
-		panic(err)
-	}
-	p, err := r.Parent()
-	if err != nil {
-		panic(fmt.Sprintf("error in MakeNetwork after grafting w: %s", err))
+		panic(fmt.Sprintf("error in MakeNetwork after grafting onto node %d: %s", n.Id(), err))
 	}
 	p.SetName(name)
 }

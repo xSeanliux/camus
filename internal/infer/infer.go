@@ -43,7 +43,7 @@ func MakeInferOptions(nprocs int, quartOpts pr.QuartetFilterOptions, minSupport 
 		log.Println("WARNING: using -asSet without quartet filtering is not recommended")
 	}
 	if _, ok := scoreMode.(*sc.MaximizeScorer); bidirectionalEdges && !ok {
-		// ponytail: edge penalties (norm/sym) are one-directional
+		// edge penalties (norm/sym) are one-directional
 		return nil, fmt.Errorf("%w: -B only supported with -sm max", ErrInvalidOption)
 	}
 	return &InferOptions{

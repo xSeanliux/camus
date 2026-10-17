@@ -159,7 +159,7 @@ func parseArgs() Args {
 	hhelp := flag.Bool("hh", false, "prints help with experimental features and exits")
 	ver := flag.Bool("v", false, "prints version number and exits")
 	nprocs := flag.Int("n", 0, "number of parallel processes")
-	bidirectionalEdges := flag.Bool("B", false, "infer bidirectional lateral edges; output writes each as two hybrids, u->w and w->u (max score mode only)")
+	bidirectionalEdges := flag.Bool("B", false, "infer bidirectional lateral edges (-sm max only)")
 	flag.Parse()
 	if *help {
 		Usage(false)

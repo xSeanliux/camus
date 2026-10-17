@@ -88,7 +88,7 @@ func quartetsTotal(u, w int, td *gr.TreeData, options scorerOpts) uint64 {
 	}
 	for _, q := range td.Quartets(v) {
 		matched := QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq ||
-			reverse && QuartetScore(q, wNode, uNode, vNode, uSub, td) == gr.Qeq
+			(reverse && QuartetScore(q, wNode, uNode, vNode, uSub, td) == gr.Qeq)
 		if matched {
 			if options.asSet {
 				total += 1
