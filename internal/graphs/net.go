@@ -13,6 +13,9 @@ type Network struct {
 	Reticulations map[string]Branch // reticulation branches
 }
 
+// dummy leaf graftHybrid hangs below a hybrid node; Newick() strips it
+const placeholderTip = "####"
+
 const (
 	Ui = iota // index of u and w in reticulation array
 	Wi
@@ -77,7 +80,7 @@ func graftTip(td *TreeData, n *tree.Node, name string) *tree.Node {
 
 // grafts hybrid node named name onto n's parent edge
 func graftHybrid(td *TreeData, n *tree.Node, name string) {
-	p, err := graftTip(td, n, "####").Parent()
+	p, err := graftTip(td, n, placeholderTip).Parent()
 	if err != nil {
 		panic(fmt.Sprintf("error in MakeNetwork after grafting onto node %d: %s", n.Id(), err))
 	}
@@ -86,8 +89,8 @@ func graftHybrid(td *TreeData, n *tree.Node, name string) {
 
 func (ntw *Network) Newick() string {
 	nwk := ntw.NetTree.Newick()
-	nwk = strings.ReplaceAll(nwk, "####,", "")
-	nwk = strings.ReplaceAll(nwk, ",####", "")
+	nwk = strings.ReplaceAll(nwk, placeholderTip+",", "")
+	nwk = strings.ReplaceAll(nwk, ","+placeholderTip, "")
 	return nwk
 }
 
