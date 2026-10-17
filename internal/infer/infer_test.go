@@ -1,6 +1,7 @@
 package infer
 
 import (
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -380,6 +381,15 @@ func BenchmarkInfer(b *testing.B) {
 		_, err := Infer(tre, quartets.Trees, InferOptions{runtime.GOMAXPROCS(0), qopts, 0, &sc.MaximizeScorer{}, false, 0, false})
 		if err != nil {
 			b.Fatalf("Infer failed with error %s", err)
+		}
+	}
+}
+
+func TestInfer_BidirectionalNeedsMax(t *testing.T) {
+	for _, scorer := range []sc.InitableScorer{&sc.NormalizedScorer{}, &sc.SymDiffScorer{}} {
+		_, err := Infer(nil, nil, InferOptions{ScoreMode: scorer, BidirectionalEdges: true})
+		if !errors.Is(err, ErrInvalidOption) {
+			t.Errorf("%T with -B: got %v, want ErrInvalidOption", scorer, err)
 		}
 	}
 }
