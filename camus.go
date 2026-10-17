@@ -5,7 +5,7 @@ constraint tree.
 
 # MIT License
 
-# Copyright (c) 2026 James Willson
+# Copyright (c) 2026 James Willson, Sean Liu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,7 @@ flags:
 	-t float
 	  	threshold for quartet filter [0, 1] (default 0.5)
 	-v	prints version number and exits
+	-B  infers bidirectional edges instead
 
 examples:
 
@@ -87,7 +88,7 @@ const (
 	DefaultAlpha      = 0.1
 )
 
-var experimentalFlags = []string{"a", "asSet", "q", "sm"}
+var experimentalFlags = []string{"a", "asSet", "q", "sm", "b"}
 
 type Args struct {
 	prefix       string          // output prefix
@@ -159,6 +160,7 @@ func parseArgs() Args {
 	hhelp := flag.Bool("hh", false, "prints help with experimental features and exits")
 	ver := flag.Bool("v", false, "prints version number and exits")
 	nprocs := flag.Int("n", 0, "number of parallel processes")
+	bidirectionalEdges := flag.Bool("B", false, "infer bidirectional lateral edges (default unidirectional)")
 	flag.Parse()
 	if *help {
 		Usage(false)
@@ -183,7 +185,7 @@ func parseArgs() Args {
 	if err != nil {
 		parserError(err.Error())
 	}
-	inferOpts, err := in.MakeInferOptions(*nprocs, qOpts, *supp, scorer, *asSet, *alpha)
+	inferOpts, err := in.MakeInferOptions(*nprocs, qOpts, *supp, scorer, *asSet, *alpha, *bidirectionalEdges)
 	if err != nil {
 		parserError(err.Error())
 	}

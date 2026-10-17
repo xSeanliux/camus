@@ -40,7 +40,7 @@ func (qt QuartetTotals) PercentQuartetSat(branches []gr.Branch, td *gr.TreeData)
 }
 
 // Calculate the total number of quartets for all edges
-func (qt *QuartetTotals) CalculateQuartetTotals(td *gr.TreeData, asSet bool, nprocs int) error {
+func (qt *QuartetTotals) CalculateQuartetTotals(td *gr.TreeData, options scorerOpts, nprocs int) error {
 	log.Println("calculating edge scores")
 	n := len(td.Nodes())
 	qt.quartetTotals = make([][]uint64, n)
@@ -51,7 +51,7 @@ func (qt *QuartetTotals) CalculateQuartetTotals(td *gr.TreeData, asSet bool, npr
 		g.Go(func() error {
 			for w := range n {
 				if ShouldCalcEdge(u, w, td) {
-					qt.quartetTotals[u][w] = quartetsTotal(u, w, td, asSet)
+					qt.quartetTotals[u][w] = quartetsTotal(u, w, td, options)
 				}
 			}
 			return nil
@@ -75,13 +75,19 @@ func CycleLength(u, w int, td *gr.TreeData) int {
 
 // calculates the total number of quartets from the input trees that align with
 // a specific edge
-func quartetsTotal(u, w int, td *gr.TreeData, asSet bool) uint64 {
+func quartetsTotal(u, w int, td *gr.TreeData, options scorerOpts) uint64 {
+	asSet := options.asSet
+	bidirectionalEdges := options.bidirectionalEdges
 	v := td.LCA(u, w)
 	uNode, wNode, vNode := td.IdToNodes[u], td.IdToNodes[w], td.IdToNodes[v]
 	var total uint64
 	wSub := getWSubtree(u, w, v, td)
 	for _, q := range td.Quartets(v) {
-		if QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq {
+		matched := QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq
+		if !matched && bidirectionalEdges {
+			matched = QuartetScore(q, uNode, wNode, vNode, wSub, td) == gr.Qeq
+		}
+		if matched {
 			if asSet {
 				total += 1
 			} else {

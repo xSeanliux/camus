@@ -117,7 +117,7 @@ func TestPreprocess_Errors(t *testing.T) {
 				}
 				gtrees[i] = tmp
 			}
-			_, err = Preprocess(tre, gtrees, runtime.GOMAXPROCS(0), QuartetFilterOptions{mode: 0, threshold: 0}, 0)
+			_, err = Preprocess(tre, gtrees, runtime.GOMAXPROCS(0), QuartetFilterOptions{mode: 0, threshold: 0}, 0, false)
 			if err != nil && !errors.Is(err, test.expectedErr) {
 				t.Errorf("unexpected error %v", err)
 			} else if err != nil {
